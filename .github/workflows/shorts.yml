@@ -124,11 +124,11 @@ jobs:
             "brainicism/bgutil-ytdlp-pot-provider:${BGUTIL_POT_VERSION}"
           ready=0
           for attempt in {1..30}; do
-            if curl --fail --silent --show-error http://127.0.0.1:4416/ >/dev/null; then
-              ready=1
+            if timeout 1 bash -c '</dev/tcp/127.0.0.1/4416' 2>/dev/null; then
+             ready=1
               break
             fi
-            sleep 1
+           sleep 1
           done
           if [[ "$ready" != "1" ]]; then
             docker logs kila-bgutil-pot || true
