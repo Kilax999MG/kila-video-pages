@@ -123,6 +123,29 @@ class OutputTests(unittest.TestCase):
             self.assertTrue((output / "clip_1.meta.json").exists())
 
 
+class YouTubePreflightTests(unittest.TestCase):
+    def _result(self, code, output):
+        class Result:
+            returncode = code
+            stdout = output
+        return Result()
+
+    def test_preflight_accepts_success(self):
+        with patch.object(run_workflow.subprocess, "run", return_value=self._result(0, "abcdefghijk\n")):
+            run_workflow.youtube_access_preflight("https://youtu.be/abcdefghijk")
+
+    def test_preflight_reports_bot_check(self):
+        output = "ERROR: [youtube] Sign in to confirm you're not a bot"
+        with patch.object(run_workflow.subprocess, "run", return_value=self._result(1, output)):
+            with self.assertRaisesRegex(RuntimeError, "bot check blocked"):
+                run_workflow.youtube_access_preflight("https://youtu.be/abcdefghijk")
+
+    def test_preflight_reports_403(self):
+        with patch.object(run_workflow.subprocess, "run", return_value=self._result(1, "HTTP Error 403: Forbidden")):
+            with self.assertRaisesRegex(RuntimeError, "HTTP 403"):
+                run_workflow.youtube_access_preflight("https://youtu.be/abcdefghijk")
+
+
 class ChopifyPatchTests(unittest.TestCase):
     def test_downloader_uses_optional_cookie_file_without_embedding_cookie_data(self):
         with tempfile.TemporaryDirectory() as directory:
