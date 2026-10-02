@@ -120,6 +120,50 @@ def normalize_clip_names(output_dir: Path) -> list[Path]:
     return [output_dir / f"clip_{index}.mp4" for index in range(1, len(generated) + 1)]
 
 
+
+def youtube_access_preflight(url: str) -> None:
+    """Verify yt-dlp can resolve the requested video before expensive transcription/rendering."""
+    command = [
+        sys.executable, "-m", "yt_dlp",
+        "--simulate", "--no-playlist",
+        "--print", "%(id)s",
+        url,
+    ]
+    result = subprocess.run(
+        command,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        timeout=240,
+        check=False,
+        env=os.environ.copy(),
+    )
+    output = result.stdout or ""
+    if output:
+        print("yt-dlp preflight:", flush=True)
+        print(output[-6000:], flush=True)
+    if result.returncode == 0:
+        return
+
+    lowered = output.lower()
+    if "sign in to confirm you're not a bot" in lowered or "sign in to confirm you’re not a bot" in lowered:
+        reason = (
+            "YouTube bot check blocked this GitHub runner even after the PO-token provider "
+            "was enabled. Re-running may obtain a different runner IP; optionally configure the "
+            "repository YOUTUBE_COOKIES secret with your own Netscape-format YouTube cookies."
+        )
+    elif "http error 403" in lowered or "403 forbidden" in lowered:
+        reason = (
+            "YouTube returned HTTP 403 after the PO-token flow. This normally means the current "
+            "runner IP/session is still being rejected by YouTube."
+        )
+    elif "http error 429" in lowered or "too many requests" in lowered:
+        reason = "YouTube rate-limited the GitHub runner (HTTP 429). Try a later run."
+    else:
+        tail = " ".join(line.strip() for line in output.splitlines()[-8:] if line.strip())[:900]
+        reason = f"yt-dlp could not resolve the video: {tail or 'unknown extraction error'}"
+    raise RuntimeError(reason)
+
 def render(job: dict) -> str:
     chopify_dir = Path(os.environ["CHOPIFY_DIR"])
     output_dir = Path(os.environ.get("RUNNER_TEMP", "/tmp")) / "kila-shorts-output"
@@ -131,6 +175,7 @@ def render(job: dict) -> str:
         [sys.executable, str(ROOT / "scripts" / "patch_chopify.py"), str(chopify_dir)],
         check=True,
     )
+    youtube_access_preflight(job["url"])
     command = [
         sys.executable, str(chopify_dir / "chopify.py"), job["url"],
         "--workdir", str(work_dir), "--out", str(output_dir),
