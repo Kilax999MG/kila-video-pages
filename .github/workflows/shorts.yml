@@ -1,0 +1,110 @@
+name: Kila Shorts
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: YouTube video URL
+        required: true
+        type: string
+      style:
+        description: Caption style
+        required: true
+        default: hormozi
+        type: choice
+        options: [default, hormozi, mrbeast, podcast]
+      max_clips:
+        description: Number of clips (1-5)
+        required: true
+        default: "3"
+        type: string
+      min_duration:
+        description: Minimum seconds (15, 20, 30)
+        required: true
+        default: "20"
+        type: string
+      max_duration:
+        description: Maximum seconds (30, 45, 60)
+        required: true
+        default: "60"
+        type: string
+      tighten:
+        description: Remove filler and pauses
+        required: true
+        default: true
+        type: boolean
+      loudnorm:
+        description: Normalize audio
+        required: true
+        default: true
+        type: boolean
+  issues:
+    types: [opened]
+  schedule:
+    - cron: "17 */6 * * *"
+
+permissions:
+  contents: write
+  issues: write
+  actions: read
+
+concurrency:
+  group: kila-shorts-${{ github.event.issue.number || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  render:
+    if: >-
+      github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' ||
+      (github.event_name == 'issues' &&
+       contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.issue.author_association) &&
+       (github.event.issue.title == '[SHORT JOB] Auto clip' ||
+        github.event.issue.title == '[CHANNEL WATCH] Configure'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      CHOPIFY_REV: 99fa3e3d81be7ce35debf1e302a5c5da75f53f62
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install FFmpeg and system libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes ffmpeg libgl1 libglib2.0-0
+
+      - name: Set up Deno for YouTube JavaScript challenges
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Install pinned Chopify requirements and current yt-dlp
+        run: |
+          git clone --filter=blob:none https://github.com/mehbul/chopify.git "$RUNNER_TEMP/chopify"
+          git -C "$RUNNER_TEMP/chopify" checkout --detach "$CHOPIFY_REV"
+          python -m pip install --upgrade pip
+          python -m pip install -r "$RUNNER_TEMP/chopify/requirements.txt"
+          python -m pip install --upgrade 'yt-dlp[default]'
+          echo "CHOPIFY_DIR=$RUNNER_TEMP/chopify" >> "$GITHUB_ENV"
+          echo "Chopify revision: $(git -C "$RUNNER_TEMP/chopify" rev-parse HEAD)"
+          yt-dlp --version
+          deno --version
+
+      - name: Validate job, render and publish
+        env:
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          GITHUB_EVENT_PATH: ${{ github.event_path }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_REF_NAME: ${{ github.event.repository.default_branch || github.ref_name }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: python scripts/run_workflow.py

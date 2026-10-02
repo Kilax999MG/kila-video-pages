@@ -1,101 +1,376 @@
 <!doctype html>
-<html lang="de">
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <meta name="theme-color" content="#11131a" />
+  <meta name="theme-color" content="#101513" />
   <meta name="color-scheme" content="dark" />
-  <title>Kila Video</title>
+  <meta name="description" content="Turn YouTube videos into vertical, captioned Shorts from your phone." />
+  <title>Kila Shorts</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
-    :root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#f7f7fb;background:#0b0d12}
+    :root{
+      color-scheme:dark;--ink:#f0f4ef;--muted:#9ca8a2;--dim:#6d7973;--bg:#101513;
+      --panel:#171f1b;--line:#2a3730;--cyan:#62e5d0;--cyan-dark:#153d37;--lime:#d3f071;
+      --red:#ff786f;--font:"DM Sans",sans-serif;--display:"Barlow Condensed","Arial Narrow",sans-serif
+    }
     *{box-sizing:border-box}
-    body{margin:0;min-height:100dvh;background:linear-gradient(180deg,#121520,#090b10);overflow:hidden}
-    header{height:64px;padding:10px 12px max(10px,env(safe-area-inset-right));display:flex;gap:8px;align-items:center;border-bottom:1px solid #262b38;background:#10131bcc;backdrop-filter:blur(14px)}
-    .brand{font-weight:800;letter-spacing:.2px;margin-right:auto;white-space:nowrap}
-    .tabs{display:flex;gap:6px;overflow:auto;scrollbar-width:none}
-    .tabs::-webkit-scrollbar{display:none}
-    button,a.btn{appearance:none;border:1px solid #30384a;background:#171c27;color:#f6f7fb;border-radius:12px;padding:10px 12px;font-weight:700;text-decoration:none;white-space:nowrap}
-    button.active{background:#f2f3f8;color:#0b0d12;border-color:#f2f3f8}
-    main{height:calc(100dvh - 64px);position:relative}
-    .pane{position:absolute;inset:0;display:none}
-    .pane.active{display:block}
-    iframe{width:100%;height:100%;border:0;background:#0b0d12}
-    .info{height:100%;overflow:auto;padding:18px 16px 40px;max-width:720px;margin:auto}
-    .card{background:#151923;border:1px solid #2c3240;border-radius:18px;padding:16px;margin-bottom:12px}
-    h1,h2,p{margin-top:0}
-    code{background:#0a0c11;border:1px solid #282e3a;padding:2px 6px;border-radius:8px}
-    .ok{color:#9ff0b3}.bad{color:#ff9fa5}.muted{color:#adb5c6}
-    .row{display:flex;gap:8px;flex-wrap:wrap}
-    .small{font-size:.9rem}
+    html{min-height:100%;background:var(--bg);scroll-behavior:smooth}
+    body{margin:0;min-height:100dvh;color:var(--ink);font:500 15px/1.5 var(--font);background:radial-gradient(ellipse at 82% 0%,#1b3028 0,transparent 33rem),linear-gradient(155deg,#101513 0%,#0d1210 68%,#141b17 100%)}
+    button,input,select{font:inherit}
+    button,a{-webkit-tap-highlight-color:transparent}
+    a{color:inherit}
+    .shell{width:min(100%,760px);margin:0 auto;padding:0 18px calc(38px + env(safe-area-inset-bottom))}
+    .topbar{height:72px;display:flex;align-items:center;gap:18px;border-bottom:1px solid #ffffff12}
+    .brand{display:flex;align-items:center;gap:10px;text-decoration:none;margin-right:auto}
+    .brand-mark{width:34px;height:34px;display:grid;place-items:center;border-radius:10px;background:var(--cyan);color:#10201c;font:800 22px/1 var(--display)}
+    .brand-name{font:800 23px/1 var(--display);text-transform:uppercase;letter-spacing:0}
+    .brand-name span{color:var(--cyan)}
+    .toplinks{display:flex;gap:8px}
+    .icon-link{min-height:42px;display:inline-flex;align-items:center;gap:7px;padding:0 11px;border:1px solid var(--line);border-radius:8px;color:#c5d0ca;text-decoration:none;font-size:12px;font-weight:700}
+    .icon-link svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.8}
+    .intro{padding:24px 0 19px;display:flex;align-items:flex-end;justify-content:space-between;gap:14px}
+    h1{margin:0;font:800 clamp(40px,10vw,58px)/.88 var(--display);text-transform:uppercase;letter-spacing:0}
+    h1 span{color:var(--cyan)}
+    .intro-note{max-width:180px;margin:0 0 2px;color:var(--muted);font-size:12px;line-height:1.4;text-align:right}
+    .statusbar{display:flex;align-items:center;gap:10px;padding:11px 13px;margin-bottom:17px;border:1px solid var(--line);border-radius:8px;background:#141a17}
+    .status-dot{width:9px;height:9px;flex:0 0 auto;border-radius:50%;background:var(--lime);box-shadow:0 0 14px #d3f07166}
+    .statusbar[data-state="processing"] .status-dot{background:var(--cyan);box-shadow:0 0 14px #62e5d066;animation:pulse 1.3s ease-in-out infinite}
+    .statusbar[data-state="failed"] .status-dot{background:var(--red);box-shadow:0 0 14px #ff786f66}
+    .status-label{font:800 16px/1 var(--display);letter-spacing:0;text-transform:uppercase}
+    .status-detail{margin-left:auto;color:var(--muted);font-size:11px;text-align:right}
+    @keyframes pulse{50%{opacity:.35}}
+    .mode-switch{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:14px;padding:5px;border:1px solid var(--line);border-radius:9px;background:#111714}
+    .mode-switch button{min-height:46px;border:0;border-radius:6px;background:transparent;color:var(--muted);font-weight:700;font-size:13px}
+    .mode-switch button[aria-selected="true"]{background:#25332d;color:var(--cyan)}
+    .form-panel{padding:17px 15px 15px;border:1px solid #34443b;border-radius:9px;background:linear-gradient(145deg,#1a241f,#151b18)}
+    .form-heading{display:flex;align-items:center;gap:9px;margin:0 0 14px;font:700 23px/1 var(--display);text-transform:uppercase}
+    .form-heading::before{content:"";width:4px;height:20px;border-radius:2px;background:var(--cyan)}
+    .field{display:grid;gap:7px;margin:0 0 15px}
+    .field label,.group-label{color:#d4ded8;font-size:12px;font-weight:700}
+    input[type="url"],select{width:100%;min-height:50px;padding:0 13px;border:1px solid #36453d;border-radius:7px;outline:none;background:#101613;color:var(--ink);font-size:15px}
+    input[type="url"]::placeholder{color:#65736b}
+    input:focus,select:focus{border-color:var(--cyan);box-shadow:0 0 0 2px #62e5d01c}
+    .field-hint,.note{margin:0;color:var(--dim);font-size:11px;line-height:1.45}
+    .settings{display:grid;grid-template-columns:1fr 1fr;gap:12px 10px;margin:0 0 16px}
+    .settings .field{margin:0}
+    .checklist{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0 9px}
+    .check-row{min-height:46px;display:flex;align-items:center;gap:10px;padding:9px 10px;border:1px solid #303c35;border-radius:7px;background:#121815;color:#dce4df;font-size:12px;font-weight:600}
+    .check-row input{width:20px;height:20px;flex:0 0 auto;margin:0;accent-color:var(--cyan)}
+    .check-explainer{margin:0 0 15px 2px;color:var(--dim);font-size:10px;line-height:1.45}
+    .enable-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 12px;border:1px solid #34443b;border-radius:7px;background:#111714}
+    .enable-copy strong{display:block;color:var(--ink);font-size:13px}
+    .enable-copy span{display:block;color:var(--muted);font-size:10px}
+    .switch{position:relative;width:49px;height:28px;flex:0 0 auto}
+    .switch input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;z-index:1}
+    .switch-track{position:absolute;inset:0;border:1px solid #48564d;border-radius:18px;background:#253029;transition:background .18s,border-color .18s}
+    .switch-track::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#a4b0a8;transition:transform .18s,background .18s}
+    .switch input:checked+.switch-track{border-color:var(--cyan);background:var(--cyan-dark)}
+    .switch input:checked+.switch-track::after{transform:translateX(20px);background:var(--cyan)}
+    .switch input:focus-visible+.switch-track{outline:2px solid var(--cyan);outline-offset:3px}
+    .submit{width:100%;min-height:56px;display:flex;align-items:center;justify-content:center;gap:10px;margin-top:16px;border:0;border-radius:7px;background:var(--cyan);color:#10201c;font:800 24px/1 var(--display);letter-spacing:0;text-transform:uppercase;box-shadow:0 8px 24px #62e5d01c;transition:transform .16s,background .16s}
+    .submit:active{transform:translateY(1px);background:#83f0df}
+    .submit svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:2}
+    .consent{margin:11px 2px 0;color:var(--dim);font-size:10px;text-align:center}
+    .section-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:24px 0 11px;border-bottom:1px solid #ffffff16}
+    h2{margin:0;font:700 26px/1 var(--display);text-transform:uppercase}
+    .section-head a{color:var(--cyan);font-size:11px;font-weight:700;text-decoration:none}
+    .feed{display:grid;gap:9px;padding-top:10px}
+    .release{display:grid;grid-template-columns:72px minmax(0,1fr);gap:12px;align-items:center;padding:9px;border:1px solid var(--line);border-radius:8px;background:#151c18}
+    .poster{width:72px;aspect-ratio:9/16;display:grid;place-items:center;overflow:hidden;border-radius:4px;background:linear-gradient(155deg,#273b32,#131a17);color:var(--cyan);font:700 14px var(--display)}
+    .poster img{width:100%;height:100%;object-fit:cover}
+    .release-copy{min-width:0}
+    .release-title{display:block;overflow:hidden;color:var(--ink);font-size:13px;font-weight:700;text-overflow:ellipsis;white-space:nowrap}
+    .release-meta{margin:3px 0 8px;color:var(--muted);font-size:10px}
+    .download{min-height:36px;display:inline-flex;align-items:center;gap:7px;padding:0 11px;border-radius:6px;background:#283931;color:var(--cyan);font-size:11px;font-weight:700;text-decoration:none}
+    .download svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2}
+    .empty{padding:15px 2px;color:var(--muted);font-size:12px}
+    .run-row{display:flex;align-items:center;gap:9px;padding:11px 1px;border-bottom:1px solid #ffffff10}
+    .run-pill{min-width:76px;padding:4px 7px;border:1px solid #455249;border-radius:4px;color:var(--lime);font:700 11px/1.2 var(--display);text-align:center}
+    .run-pill.failed{border-color:#763d39;color:var(--red)}
+    .run-pill.processing{border-color:#28685f;color:var(--cyan)}
+    .run-name{min-width:0;overflow:hidden;color:#d6ded9;font-size:11px;text-overflow:ellipsis;white-space:nowrap}
+    .run-date{margin-left:auto;color:var(--dim);font-size:10px;white-space:nowrap}
+    .footer{padding-top:20px;color:var(--dim);font-size:10px;line-height:1.6}
+    [hidden]{display:none!important}
+    @media(min-width:620px){.shell{padding-right:24px;padding-left:24px}.form-panel{padding:22px}.settings{grid-template-columns:repeat(4,1fr)}.checklist{grid-template-columns:repeat(4,1fr)}.release{grid-template-columns:84px minmax(0,1fr);padding:11px}.poster{width:84px}}
+    @media(max-width:380px){.shell{padding-right:12px;padding-left:12px}.topbar{gap:8px}.icon-link{gap:5px;padding:0 8px;font-size:11px}.intro-note{max-width:140px}.checklist{grid-template-columns:1fr}.settings{gap:10px}}
+    @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}}
   </style>
 </head>
 <body>
-<header>
-  <div class="brand">Kila Video</div>
-  <nav class="tabs" aria-label="Renderer">
-    <button class="tab active" data-tab="wan">WAN 2.2</button>
-    <button class="tab" data-tab="ltx">LTX 2.3</button>
-    <button class="tab" data-tab="local">WebGPU</button>
-  </nav>
-</header>
-<main>
-  <section id="wan" class="pane active">
-    <iframe
-      title="Wan 2.2 Fast"
-      src="https://zerogpu-aoti-wan2-2-fp8da-aoti-faster.hf.space"
-      allow="clipboard-read; clipboard-write; fullscreen; camera; microphone"
-      loading="eager"></iframe>
-  </section>
+  <div class="shell">
+    <header class="topbar">
+      <a class="brand" href="#top" aria-label="Kila Shorts home"><span class="brand-mark">K</span><span class="brand-name">Kila <span>Shorts</span></span></a>
+      <nav class="toplinks" aria-label="GitHub links">
+        <a class="icon-link" href="https://github.com/Kilax999MG/kila-video-pages/actions" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.3-5.6L4 8.7M4 4v4.7h4.7M12 7v5l3 2"/></svg>Actions
+        </a>
+        <a class="icon-link" href="https://github.com/Kilax999MG/kila-video-pages/releases" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 17v3h14v-3"/></svg>Releases
+        </a>
+      </nav>
+    </header>
 
-  <section id="ltx" class="pane">
-    <iframe
-      title="LTX 2.3 Studio"
-      src="https://techfreakworm-ltx2-3-studio.hf.space"
-      allow="clipboard-read; clipboard-write; fullscreen; camera; microphone"
-      loading="lazy"></iframe>
-  </section>
+    <main id="top">
+      <div class="intro"><h1>Make it<br /><span>short.</span></h1><p class="intro-note">YouTube in.<br />Phone-ready Shorts out.</p></div>
+      <div class="statusbar" id="statusBar" data-state="ready" role="status" aria-live="polite">
+        <span class="status-dot" aria-hidden="true"></span><strong class="status-label" id="statusLabel">READY</strong>
+        <span class="status-detail" id="statusDetail">Waiting for a new job</span>
+      </div>
 
-  <section id="local" class="pane">
-    <div class="info">
-      <div class="card">
-        <h2>Browser-only WebGPU</h2>
-        <p id="gpuState" class="muted">WebGPU wird geprüft …</p>
-        <p class="small muted">Das läuft wirklich direkt auf deinem Handy. Für große Video-Modelle ist ein Smartphone aber deutlich zu schwach; deshalb sind WAN/LTX oben die sinnvollen Modi.</p>
+      <div class="mode-switch" role="tablist" aria-label="Shorts mode">
+        <button type="button" role="tab" id="videoTab" aria-selected="true" aria-controls="videoPanel">VIDEO → SHORTS</button>
+        <button type="button" role="tab" id="channelTab" aria-selected="false" aria-controls="channelPanel">CHANNEL AUTO</button>
       </div>
-      <div class="card">
-        <h2>Experimentelles WebT2V</h2>
-        <p>Ein echtes Text→Video-Demo, das komplett im Browser mit WebGPU läuft. Es erzeugt nur wenige Frames und ist eher ein Technik-Demo.</p>
-        <div class="row">
-          <a class="btn" href="https://webgpu-video-diffusion.github.io/WebGPU-Video-Diffusion/" target="_blank" rel="noopener">WebT2V öffnen</a>
-          <a class="btn" href="https://github.com/WebGPU-Video-Diffusion/WebGPU-Video-Diffusion" target="_blank" rel="noopener">Repo</a>
-        </div>
-      </div>
-      <div class="card">
-        <h2>Handy-Workflow</h2>
-        <p>1. Startbild erstellen oder hochladen.<br>2. WAN 2.2 öffnen.<br>3. Bild + Prompt eingeben.<br>4. MP4 speichern.<br>5. Für einen neuen Clip einfach den nächsten Prompt verwenden.</p>
-      </div>
-    </div>
-  </section>
-</main>
-<script>
-  const tabs=[...document.querySelectorAll('.tab')];
-  const panes=[...document.querySelectorAll('.pane')];
-  function setTab(id){
-    tabs.forEach(b=>b.classList.toggle('active',b.dataset.tab===id));
-    panes.forEach(p=>p.classList.toggle('active',p.id===id));
-    localStorage.setItem('kilaVideoTab',id);
-  }
-  tabs.forEach(b=>b.addEventListener('click',()=>setTab(b.dataset.tab)));
-  setTab(localStorage.getItem('kilaVideoTab') || 'wan');
-  const gpu=document.getElementById('gpuState');
-  if('gpu' in navigator){
-    navigator.gpu.requestAdapter().then(a=>{
-      if(a){gpu.textContent='✓ WebGPU ist in diesem Chrome verfügbar.';gpu.className='ok';}
-      else{gpu.textContent='WebGPU ist vorhanden, aber kein Adapter wurde freigegeben.';gpu.className='bad';}
-    }).catch(()=>{gpu.textContent='WebGPU konnte nicht initialisiert werden.';gpu.className='bad';});
-  }else{
-    gpu.textContent='WebGPU ist in diesem Browser nicht verfügbar.';gpu.className='bad';
-  }
-</script>
+
+      <section class="form-panel" id="videoPanel" role="tabpanel" aria-labelledby="videoTab">
+        <h2 class="form-heading">Create from a video</h2>
+        <form id="videoForm">
+          <div class="field"><label for="videoUrl">YouTube video URL</label><input id="videoUrl" type="url" required inputmode="url" autocomplete="url" placeholder="https://youtube.com/watch?v=..." /></div>
+          <div class="settings">
+            <div class="field"><label for="videoStyle">Caption style</label><select id="videoStyle"><option value="hormozi">Hormozi</option><option value="mrbeast">MrBeast</option><option value="podcast">Podcast</option><option value="default">Default</option></select></div>
+            <div class="field"><label for="clipCount">Number of clips</label><select id="clipCount"><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option></select></div>
+            <div class="field"><label for="videoMin">Minimum length</label><select id="videoMin"><option value="15">15 sec</option><option value="20" selected>20 sec</option><option value="30">30 sec</option></select></div>
+            <div class="field"><label for="videoMax">Maximum length</label><select id="videoMax"><option value="30">30 sec</option><option value="45">45 sec</option><option value="60" selected>60 sec</option></select></div>
+          </div>
+          <div class="checklist">
+            <label class="check-row"><input id="tighten" type="checkbox" checked />Tighten pauses</label>
+            <label class="check-row"><input id="loudnorm" type="checkbox" checked />Normalize audio</label>
+            <label class="check-row"><input id="faceReframe" type="checkbox" checked />Track face / reframe</label>
+            <label class="check-row"><input id="completeThought" type="checkbox" checked />Prefer complete thoughts</label>
+          </div>
+          <p class="check-explainer">Complete-sentence endings are built into Chopify's scoring and remain protected on every render.</p>
+          <button class="submit" type="submit">Create Shorts <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></button>
+          <p class="consent">Only process videos you own or have permission to reuse.</p>
+        </form>
+      </section>
+
+      <section class="form-panel" id="channelPanel" role="tabpanel" aria-labelledby="channelTab" hidden>
+        <h2 class="form-heading">Channel auto mode</h2>
+        <form id="channelForm">
+          <div class="field"><label for="channelUrl">YouTube channel videos URL</label><input id="channelUrl" type="url" required inputmode="url" placeholder="https://youtube.com/@channel/videos" /></div>
+          <div class="settings">
+            <div class="field"><label for="channelStyle">Caption style</label><select id="channelStyle"><option value="hormozi">Hormozi</option><option value="mrbeast">MrBeast</option><option value="podcast">Podcast</option><option value="default">Default</option></select></div>
+            <div class="field"><label for="channelCount">Clips per video</label><select id="channelCount"><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option></select></div>
+            <div class="field"><label for="channelMin">Minimum length</label><select id="channelMin"><option value="15">15 sec</option><option value="20" selected>20 sec</option><option value="30">30 sec</option></select></div>
+            <div class="field"><label for="channelMax">Maximum length</label><select id="channelMax"><option value="30">30 sec</option><option value="45">45 sec</option><option value="60" selected>60 sec</option></select></div>
+          </div>
+          <div class="enable-row"><div class="enable-copy"><strong>Processing enabled</strong><span>Check for new uploads every 6 hours</span></div><label class="switch" aria-label="Enable channel processing"><input id="channelEnabled" type="checkbox" checked /><span class="switch-track"></span></label></div>
+          <button class="submit" type="submit">Enable Channel Auto-Shorts <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></button>
+          <p class="consent">Only process videos you own or have permission to reuse.</p>
+        </form>
+      </section>
+
+      <section aria-labelledby="clipsHeading">
+        <div class="section-head"><h2 id="clipsHeading">Finished Shorts</h2><a href="https://github.com/Kilax999MG/kila-video-pages/releases" target="_blank" rel="noopener">All releases ↗</a></div>
+        <div class="feed" id="releaseFeed"><p class="empty">Loading public releases…</p></div>
+      </section>
+      <section aria-labelledby="runsHeading">
+        <div class="section-head"><h2 id="runsHeading">Recent runs</h2><a href="https://github.com/Kilax999MG/kila-video-pages/actions" target="_blank" rel="noopener">Open Actions ↗</a></div>
+        <div id="runFeed"><p class="empty">Loading workflow status…</p></div>
+      </section>
+      <footer class="footer">Rendered by GitHub Actions. Your YouTube links are submitted as GitHub Issues; no access token is stored in this page.</footer>
+    </main>
+  </div>
+  <script>
+    'use strict';
+    const REPO = 'Kilax999MG/kila-video-pages';
+    const API = `https://api.github.com/repos/${REPO}`;
+    const videoTab = document.getElementById('videoTab');
+    const channelTab = document.getElementById('channelTab');
+    const videoPanel = document.getElementById('videoPanel');
+    const channelPanel = document.getElementById('channelPanel');
+    const statusBar = document.getElementById('statusBar');
+    const statusLabel = document.getElementById('statusLabel');
+    const statusDetail = document.getElementById('statusDetail');
+
+    function selectMode(mode) {
+      const video = mode === 'video';
+      videoTab.setAttribute('aria-selected', String(video));
+      channelTab.setAttribute('aria-selected', String(!video));
+      videoPanel.hidden = !video;
+      channelPanel.hidden = video;
+    }
+    videoTab.addEventListener('click', () => selectMode('video'));
+    channelTab.addEventListener('click', () => selectMode('channel'));
+
+    function validYouTubeUrl(value, channel) {
+      try {
+        const url = new URL(value);
+        if (!['http:', 'https:'].includes(url.protocol) || !['youtube.com', 'www.youtube.com', 'm.youtube.com', 'youtu.be'].includes(url.hostname) || url.username || url.password || url.port || url.hash) return false;
+        if (channel) return url.hostname !== 'youtu.be' && /^\/@[^/]+(?:\/videos)?\/?$/.test(url.pathname);
+        const embedId = url.pathname.match(/^\/(?:embed|shorts)\/([A-Za-z0-9_-]{6,20})\/?$/)?.[1];
+        const id = url.hostname === 'youtu.be' ? url.pathname.slice(1) : url.pathname === '/watch' ? url.searchParams.get('v') : embedId;
+        return /^[A-Za-z0-9_-]{6,20}$/.test(id || '');
+      } catch (_) { return false; }
+    }
+
+    function jobBody(fields) {
+      return Object.entries(fields).map(([key, value]) => `${key}=${String(value)}`).join('\n');
+    }
+    function openIssue(title, fields) {
+      const url = new URL(`https://github.com/${REPO}/issues/new`);
+      url.searchParams.set('title', title);
+      url.searchParams.set('body', jobBody(fields));
+      window.location.assign(url.href);
+    }
+    function durationRange(minimum, maximum) {
+      if (Number(minimum) >= Number(maximum)) {
+        window.alert('Maximum clip length must be longer than the minimum.');
+        return false;
+      }
+      return true;
+    }
+    document.getElementById('videoForm').addEventListener('submit', event => {
+      event.preventDefault();
+      const url = document.getElementById('videoUrl').value.trim();
+      const minimum = document.getElementById('videoMin').value;
+      const maximum = document.getElementById('videoMax').value;
+      if (!validYouTubeUrl(url, false)) return window.alert('Enter a valid YouTube video URL.');
+      if (!durationRange(minimum, maximum)) return;
+      openIssue('[SHORT JOB] Auto clip', {
+        mode: 'clip', url, style: document.getElementById('videoStyle').value,
+        max_clips: document.getElementById('clipCount').value,
+        min_duration: minimum, max_duration: maximum,
+        tighten: document.getElementById('tighten').checked,
+        loudnorm: document.getElementById('loudnorm').checked,
+        face_reframe: document.getElementById('faceReframe').checked,
+        complete_thought: document.getElementById('completeThought').checked
+      });
+    });
+    document.getElementById('channelForm').addEventListener('submit', event => {
+      event.preventDefault();
+      const url = document.getElementById('channelUrl').value.trim();
+      const minimum = document.getElementById('channelMin').value;
+      const maximum = document.getElementById('channelMax').value;
+      if (!validYouTubeUrl(url, true)) return window.alert('Enter a channel URL such as youtube.com/@channel/videos.');
+      if (!durationRange(minimum, maximum)) return;
+      openIssue('[CHANNEL WATCH] Configure', {
+        mode: 'channel', url, style: document.getElementById('channelStyle').value,
+        max_clips: document.getElementById('channelCount').value,
+        min_duration: minimum, max_duration: maximum,
+        enabled: document.getElementById('channelEnabled').checked
+      });
+    });
+
+    async function api(path) {
+      const response = await fetch(`${API}${path}`, {headers: {Accept: 'application/vnd.github+json'}});
+      if (!response.ok) throw new Error(`GitHub API returned ${response.status}`);
+      return response.json();
+    }
+    function setStatus(state, detail) {
+      statusBar.dataset.state = state;
+      statusLabel.textContent = state === 'processing' ? 'PROCESSING' : state === 'failed' ? 'FAILED' : state === 'done' ? 'DONE' : 'READY';
+      statusDetail.textContent = detail;
+    }
+    function timeLabel(value) {
+      const date = new Date(value);
+      return Number.isNaN(date.getTime()) ? '' : new Intl.DateTimeFormat(undefined, {month: 'short', day: 'numeric'}).format(date);
+    }
+    async function loadRuns() {
+      const feed = document.getElementById('runFeed');
+      try {
+        const data = await api('/actions/runs?per_page=6');
+        const runs = data.workflow_runs || [];
+        if (!runs.length) {
+          setStatus('ready', 'Waiting for a new job');
+          feed.innerHTML = '<p class="empty">No processing runs yet.</p>';
+          return;
+        }
+        const latest = runs[0];
+        if (latest.status !== 'completed') setStatus('processing', `${latest.name} · ${latest.status}`);
+        else if (latest.conclusion === 'success') setStatus('done', `Last completed ${timeLabel(latest.updated_at)}`);
+        else if (latest.conclusion === 'failure') setStatus('failed', `Last run failed · ${timeLabel(latest.updated_at)}`);
+        else setStatus('ready', `Last run ${latest.conclusion || 'finished'}`);
+        feed.replaceChildren(...runs.map(run => {
+          const row = document.createElement('a');
+          row.className = 'run-row';
+          row.href = run.html_url;
+          row.target = '_blank';
+          row.rel = 'noopener';
+          const state = run.status !== 'completed' ? 'PROCESSING' : String(run.conclusion || 'DONE').toUpperCase();
+          const pill = document.createElement('span');
+          pill.className = `run-pill${run.status !== 'completed' ? ' processing' : run.conclusion === 'failure' ? ' failed' : ''}`;
+          pill.textContent = state;
+          const name = document.createElement('span');
+          name.className = 'run-name';
+          name.textContent = run.display_title || run.name || 'Shorts job';
+          const date = document.createElement('span');
+          date.className = 'run-date';
+          date.textContent = timeLabel(run.updated_at);
+          row.append(pill, name, date);
+          return row;
+        }));
+      } catch (error) {
+        feed.innerHTML = '<p class="empty">Workflow status is temporarily unavailable.</p>';
+        setStatus('ready', 'Public Actions status unavailable');
+      }
+    }
+    async function loadReleases() {
+      const feed = document.getElementById('releaseFeed');
+      try {
+        const releases = await api('/releases?per_page=10');
+        const clips = releases.flatMap(release => (release.assets || [])
+          .filter(asset => asset.name.toLowerCase().endsWith('.mp4'))
+          .map(asset => ({release, asset})));
+        if (!clips.length) {
+          feed.innerHTML = '<p class="empty">Finished clips will appear here after the first successful render.</p>';
+          return;
+        }
+        const titleLookups = clips.slice(0, 12).map(async ({release, asset}) => {
+          const metadata = release.assets.find(entry => entry.name.toLowerCase() === `${asset.name.slice(0, -4)}.meta.json`.toLowerCase());
+          if (!metadata) return '';
+          try {
+            const response = await fetch(metadata.browser_download_url);
+            if (!response.ok) return '';
+            const details = await response.json();
+            return typeof details.title === 'string' ? details.title : '';
+          } catch (_) { return ''; }
+        });
+        const titles = await Promise.all(titleLookups);
+        feed.replaceChildren(...clips.slice(0, 12).map(({release, asset}, index) => {
+          const item = document.createElement('article');
+          item.className = 'release';
+          const poster = document.createElement('div');
+          poster.className = 'poster';
+          poster.textContent = 'KILA';
+          const posterAsset = release.assets.find(entry => entry.name.toLowerCase() === `${asset.name.slice(0, -4)}.png`.toLowerCase());
+          if (posterAsset) {
+            const image = document.createElement('img');
+            image.src = posterAsset.browser_download_url;
+            image.alt = `${asset.name} poster`;
+            image.loading = 'lazy';
+            image.onerror = () => image.remove();
+            poster.replaceChildren(image);
+          }
+          const copy = document.createElement('div');
+          copy.className = 'release-copy';
+          const title = document.createElement('strong');
+          title.className = 'release-title';
+          title.textContent = titles[index] || asset.name;
+          const meta = document.createElement('p');
+          meta.className = 'release-meta';
+          meta.textContent = `${asset.name} · ${timeLabel(release.published_at)}`;
+          const download = document.createElement('a');
+          download.className = 'download';
+          download.href = asset.browser_download_url;
+          download.download = asset.name;
+          download.setAttribute('aria-label', `Download ${asset.name}`);
+          download.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 17v3h14v-3"/></svg>Download MP4';
+          copy.append(title, meta, download);
+          item.append(poster, copy);
+          return item;
+        }));
+      } catch (error) {
+        feed.innerHTML = '<p class="empty">Public releases are temporarily unavailable.</p>';
+      }
+    }
+    loadRuns();
+    loadReleases();
+    window.setInterval(() => { loadRuns(); loadReleases(); }, 90000);
+  </script>
 </body>
 </html>
