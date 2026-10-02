@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#11131a" />
+  <meta name="color-scheme" content="dark" />
+  <title>Kila Video</title>
+  <style>
+    :root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#f7f7fb;background:#0b0d12}
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100dvh;background:linear-gradient(180deg,#121520,#090b10);overflow:hidden}
+    header{height:64px;padding:10px 12px max(10px,env(safe-area-inset-right));display:flex;gap:8px;align-items:center;border-bottom:1px solid #262b38;background:#10131bcc;backdrop-filter:blur(14px)}
+    .brand{font-weight:800;letter-spacing:.2px;margin-right:auto;white-space:nowrap}
+    .tabs{display:flex;gap:6px;overflow:auto;scrollbar-width:none}
+    .tabs::-webkit-scrollbar{display:none}
+    button,a.btn{appearance:none;border:1px solid #30384a;background:#171c27;color:#f6f7fb;border-radius:12px;padding:10px 12px;font-weight:700;text-decoration:none;white-space:nowrap}
+    button.active{background:#f2f3f8;color:#0b0d12;border-color:#f2f3f8}
+    main{height:calc(100dvh - 64px);position:relative}
+    .pane{position:absolute;inset:0;display:none}
+    .pane.active{display:block}
+    iframe{width:100%;height:100%;border:0;background:#0b0d12}
+    .info{height:100%;overflow:auto;padding:18px 16px 40px;max-width:720px;margin:auto}
+    .card{background:#151923;border:1px solid #2c3240;border-radius:18px;padding:16px;margin-bottom:12px}
+    h1,h2,p{margin-top:0}
+    code{background:#0a0c11;border:1px solid #282e3a;padding:2px 6px;border-radius:8px}
+    .ok{color:#9ff0b3}.bad{color:#ff9fa5}.muted{color:#adb5c6}
+    .row{display:flex;gap:8px;flex-wrap:wrap}
+    .small{font-size:.9rem}
+  </style>
+</head>
+<body>
+<header>
+  <div class="brand">Kila Video</div>
+  <nav class="tabs" aria-label="Renderer">
+    <button class="tab active" data-tab="wan">WAN 2.2</button>
+    <button class="tab" data-tab="ltx">LTX 2.3</button>
+    <button class="tab" data-tab="local">WebGPU</button>
+  </nav>
+</header>
+<main>
+  <section id="wan" class="pane active">
+    <iframe
+      title="Wan 2.2 Fast"
+      src="https://zerogpu-aoti-wan2-2-fp8da-aoti-faster.hf.space"
+      allow="clipboard-read; clipboard-write; fullscreen; camera; microphone"
+      loading="eager"></iframe>
+  </section>
+
+  <section id="ltx" class="pane">
+    <iframe
+      title="LTX 2.3 Studio"
+      src="https://techfreakworm-ltx2-3-studio.hf.space"
+      allow="clipboard-read; clipboard-write; fullscreen; camera; microphone"
+      loading="lazy"></iframe>
+  </section>
+
+  <section id="local" class="pane">
+    <div class="info">
+      <div class="card">
+        <h2>Browser-only WebGPU</h2>
+        <p id="gpuState" class="muted">WebGPU wird geprüft …</p>
+        <p class="small muted">Das läuft wirklich direkt auf deinem Handy. Für große Video-Modelle ist ein Smartphone aber deutlich zu schwach; deshalb sind WAN/LTX oben die sinnvollen Modi.</p>
+      </div>
+      <div class="card">
+        <h2>Experimentelles WebT2V</h2>
+        <p>Ein echtes Text→Video-Demo, das komplett im Browser mit WebGPU läuft. Es erzeugt nur wenige Frames und ist eher ein Technik-Demo.</p>
+        <div class="row">
+          <a class="btn" href="https://webgpu-video-diffusion.github.io/WebGPU-Video-Diffusion/" target="_blank" rel="noopener">WebT2V öffnen</a>
+          <a class="btn" href="https://github.com/WebGPU-Video-Diffusion/WebGPU-Video-Diffusion" target="_blank" rel="noopener">Repo</a>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Handy-Workflow</h2>
+        <p>1. Startbild erstellen oder hochladen.<br>2. WAN 2.2 öffnen.<br>3. Bild + Prompt eingeben.<br>4. MP4 speichern.<br>5. Für einen neuen Clip einfach den nächsten Prompt verwenden.</p>
+      </div>
+    </div>
+  </section>
+</main>
+<script>
+  const tabs=[...document.querySelectorAll('.tab')];
+  const panes=[...document.querySelectorAll('.pane')];
+  function setTab(id){
+    tabs.forEach(b=>b.classList.toggle('active',b.dataset.tab===id));
+    panes.forEach(p=>p.classList.toggle('active',p.id===id));
+    localStorage.setItem('kilaVideoTab',id);
+  }
+  tabs.forEach(b=>b.addEventListener('click',()=>setTab(b.dataset.tab)));
+  setTab(localStorage.getItem('kilaVideoTab') || 'wan');
+  const gpu=document.getElementById('gpuState');
+  if('gpu' in navigator){
+    navigator.gpu.requestAdapter().then(a=>{
+      if(a){gpu.textContent='✓ WebGPU ist in diesem Chrome verfügbar.';gpu.className='ok';}
+      else{gpu.textContent='WebGPU ist vorhanden, aber kein Adapter wurde freigegeben.';gpu.className='bad';}
+    }).catch(()=>{gpu.textContent='WebGPU konnte nicht initialisiert werden.';gpu.className='bad';});
+  }else{
+    gpu.textContent='WebGPU ist in diesem Browser nicht verfügbar.';gpu.className='bad';
+  }
+</script>
+</body>
+</html>
