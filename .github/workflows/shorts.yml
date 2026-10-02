@@ -65,6 +65,7 @@ jobs:
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       CHOPIFY_REV: 99fa3e3d81be7ce35debf1e302a5c5da75f53f62
+      BGUTIL_POT_VERSION: "2.0.0"
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -93,6 +94,7 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r "$RUNNER_TEMP/chopify/requirements.txt"
           python -m pip install --upgrade 'yt-dlp[default]'
+          python -m pip install "bgutil-ytdlp-pot-provider==${BGUTIL_POT_VERSION}"
           echo "CHOPIFY_DIR=$RUNNER_TEMP/chopify" >> "$GITHUB_ENV"
           echo "Chopify revision: $(git -C "$RUNNER_TEMP/chopify" rev-parse HEAD)"
           yt-dlp --version
@@ -112,6 +114,52 @@ jobs:
             echo "No YouTube cookie secret configured; continuing without cookies."
           fi
 
+      - name: Start YouTube PO-token provider
+        run: |
+          set -euo pipefail
+          docker rm -f kila-bgutil-pot >/dev/null 2>&1 || true
+          docker pull "brainicism/bgutil-ytdlp-pot-provider:${BGUTIL_POT_VERSION}"
+          docker run --rm -d --init --name kila-bgutil-pot \
+            -p 127.0.0.1:4416:4416 \
+            "brainicism/bgutil-ytdlp-pot-provider:${BGUTIL_POT_VERSION}"
+          ready=0
+          for attempt in {1..30}; do
+            if curl --fail --silent --show-error http://127.0.0.1:4416/ >/dev/null; then
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+          if [[ "$ready" != "1" ]]; then
+            docker logs kila-bgutil-pot || true
+            echo "PO-token provider failed to start" >&2
+            exit 1
+          fi
+          docker logs kila-bgutil-pot || true
+
+      - name: Configure yt-dlp for current YouTube checks
+        run: |
+          set -euo pipefail
+          config_dir="$HOME/.config/yt-dlp"
+          config_file="$config_dir/config"
+          mkdir -p "$config_dir"
+          cat > "$config_file" <<'EOF'
+          --retries 5
+          --fragment-retries 5
+          --extractor-retries 3
+          --sleep-requests 1
+          --force-ipv4
+          --extractor-args "youtube:player-client=mweb"
+          --extractor-args "youtubepot-bgutilhttp:base_url=http://127.0.0.1:4416"
+          EOF
+          if [[ -n "${YOUTUBE_COOKIES_FILE:-}" ]]; then
+            printf '%s\n' "--cookies $YOUTUBE_COOKIES_FILE" >> "$config_file"
+          fi
+          echo "yt-dlp runtime configuration:"
+          sed -E 's#(--cookies ).*#\1<temporary-file>#' "$config_file"
+          yt-dlp --version
+          deno --version
+
       - name: Validate job, render and publish
         env:
           GITHUB_EVENT_NAME: ${{ github.event_name }}
@@ -122,9 +170,11 @@ jobs:
           GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
         run: python scripts/run_workflow.py
 
-      - name: Remove temporary YouTube cookies
+      - name: Clean up YouTube runtime
         if: always()
         run: |
+          docker rm -f kila-bgutil-pot >/dev/null 2>&1 || true
+          rm -f -- "$HOME/.config/yt-dlp/config"
           if [[ -n "${YOUTUBE_COOKIES_FILE:-}" ]]; then
             rm -f -- "$YOUTUBE_COOKIES_FILE"
           fi
