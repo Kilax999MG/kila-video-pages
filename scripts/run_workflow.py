@@ -193,7 +193,22 @@ def render(job: dict) -> str:
         command.append("--no-face-reframe")
     if not job.get("complete_thought", True):
         command.append("--allow-incomplete-thoughts")
-    subprocess.run(command, check=True, cwd=chopify_dir, env=os.environ.copy())
+    result = subprocess.run(
+        command,
+        cwd=chopify_dir,
+        env=os.environ.copy(),
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        check=False,
+    )
+    output = result.stdout or ""
+    if output:
+        print("Chopify output:", flush=True)
+        print(output[-12000:], flush=True)
+    if result.returncode != 0:
+        tail = " ".join(line.strip() for line in output.splitlines()[-12:] if line.strip())[:1800]
+        raise RuntimeError(f"Chopify failed (exit {result.returncode}): {tail or 'no diagnostic output'}")
 
     generated = normalize_clip_names(output_dir)
     if not generated:
