@@ -10,6 +10,7 @@ from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
 from resolve_job import JobError, parse_dispatch, parse_issue
+from patch_chopify import patch_downloader
 import run_workflow
 
 
@@ -120,6 +121,27 @@ class OutputTests(unittest.TestCase):
             self.assertEqual([clip.name for clip in clips], ["clip_1.mp4"])
             self.assertTrue((output / "clip_1.png").exists())
             self.assertTrue((output / "clip_1.meta.json").exists())
+
+
+class ChopifyPatchTests(unittest.TestCase):
+    def test_downloader_uses_optional_cookie_file_without_embedding_cookie_data(self):
+        with tempfile.TemporaryDirectory() as directory:
+            downloader = Path(directory) / "download_and_transcribe.py"
+            downloader.write_text(
+                'import sys\n'
+                'cmd = [\n'
+                '        "--no-playlist",\n'
+                ']\n',
+                encoding="utf-8",
+            )
+
+            patch_downloader(downloader)
+            patched = downloader.read_text(encoding="utf-8")
+
+            compile(patched, str(downloader), "exec")
+            self.assertIn('"--cookies", os.environ["YOUTUBE_COOKIES_FILE"]', patched)
+            self.assertIn('os.environ.get("YOUTUBE_COOKIES_FILE")', patched)
+            self.assertNotIn("cookie-content", patched)
 
 
 if __name__ == "__main__":

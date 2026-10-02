@@ -12,6 +12,10 @@ Mobile YouTube-to-Shorts workflow. GitHub Pages is the frontend; GitHub Actions 
 
 Only submit videos you own or have permission to reuse. Private, protected, or authentication-required videos are not supported. YouTube may temporarily block GitHub-hosted runners; failed downloads remain failed and are reported in the workflow and Issue.
 
+### Optional YouTube cookies
+
+If YouTube blocks the runner, an owner can add their own exported Netscape-format cookie file as the repository Actions secret `YOUTUBE_COOKIES`. The workflow writes it to a temporary runner file, passes it to yt-dlp, and removes the file after the job. Never use cookies from public dumps or another person: cookies can grant access to the associated Google account. Use a dedicated account, and note that YouTube may still reject or expire the session. Without the secret, processing continues without cookies.
+
 ## Channel Auto Mode
 
 1. Select **Channel Auto** on the Pages site, paste a channel videos URL such as `https://youtube.com/@channel/videos`, choose settings, and tap **Enable Channel Auto-Shorts**.

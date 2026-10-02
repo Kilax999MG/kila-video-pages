@@ -15,6 +15,18 @@ def replace_once(path: Path, old: str, new: str, expected: int = 1) -> None:
     path.write_text(source.replace(old, new), encoding="utf-8")
 
 
+def patch_downloader(downloader: Path) -> None:
+    replace_once(downloader, "import sys\n", "import os\nimport sys\n")
+    replace_once(
+        downloader,
+        '        "--no-playlist",\n',
+        '        "--no-playlist", "--retries", "5", "--fragment-retries", "5",\n'
+        '        "--extractor-retries", "3",\n'
+        '        *(["--cookies", os.environ["YOUTUBE_COOKIES_FILE"]]\n'
+        '          if os.environ.get("YOUTUBE_COOKIES_FILE") else []),\n',
+    )
+
+
 def prepare(chopify_dir: Path) -> None:
     main = chopify_dir / "chopify.py"
     renderer = chopify_dir / "render_clips.py"
@@ -115,12 +127,7 @@ def prepare(chopify_dir: Path) -> None:
         '        args.min_len, args.max_len, search=args.search, pick=args.clips,\n'
         '        complete_thought=not args.allow_incomplete_thoughts)\n',
     )
-    replace_once(
-        downloader,
-        '        "--no-playlist",\n',
-        '        "--no-playlist", "--retries", "5", "--fragment-retries", "5",\n'
-        '        "--extractor-retries", "3",\n',
-    )
+    patch_downloader(downloader)
 
 
 def main() -> int:
