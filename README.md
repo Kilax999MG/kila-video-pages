@@ -12,9 +12,11 @@ Mobile YouTube-to-Shorts workflow. GitHub Pages is the frontend; GitHub Actions 
 
 Only submit videos you own or have permission to reuse. Private, protected, or authentication-required videos are not supported. YouTube may temporarily block GitHub-hosted runners; failed downloads remain failed and are reported in the workflow and Issue.
 
-### Optional YouTube cookies
+### YouTube bot-check handling
 
-If YouTube blocks the runner, an owner can add their own exported Netscape-format cookie file as the repository Actions secret `YOUTUBE_COOKIES`. The workflow writes it to a temporary runner file, passes it to yt-dlp, and removes the file after the job. Never use cookies from public dumps or another person: cookies can grant access to the associated Google account. Use a dedicated account, and note that YouTube may still reject or expire the session. Without the secret, processing continues without cookies.
+The workflow installs current `yt-dlp[default]`, Deno/EJS, and the BgUtils PO-token provider (`bgutil-ytdlp-pot-provider` 2.0.0). A local provider container supplies PO tokens to the recommended `mweb` YouTube client, and a preflight verifies that the selected video can actually be resolved before Whisper/rendering starts. This materially improves GitHub-runner reliability, but YouTube can still reject a datacenter IP/session.
+
+As an optional fallback, an owner can add their own exported Netscape-format cookie file as the repository Actions secret `YOUTUBE_COOKIES`. The workflow writes it only to a temporary runner file and removes it after the job. Never use cookies from public dumps or another person: cookies can grant access to the associated Google account. Cookies are not required for normal public videos and do not guarantee that YouTube will accept a GitHub-hosted runner.
 
 ## Channel Auto Mode
 
